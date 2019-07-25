@@ -27,6 +27,9 @@ namespace UnityGameFramework.Runtime
         private static readonly int AssetsStringLength = "Assets".Length;
 
         [SerializeField]
+        private bool m_EnableCachedAssets = true;
+
+        [SerializeField]
         private int m_LoadAssetCountPerFrame = 1;
 
         [SerializeField]
@@ -37,9 +40,10 @@ namespace UnityGameFramework.Runtime
 
         private string m_ReadOnlyPath = null;
         private string m_ReadWritePath = null;
-        private LinkedList<LoadAssetInfo> m_LoadAssetInfos = null;
-        private LinkedList<LoadSceneInfo> m_LoadSceneInfos = null;
-        private LinkedList<UnloadSceneInfo> m_UnloadSceneInfos = null;
+        private Dictionary<string, UnityEngine.Object> m_CachedAssets = null;
+        private GameFrameworkLinkedList<LoadAssetInfo> m_LoadAssetInfos = null;
+        private GameFrameworkLinkedList<LoadSceneInfo> m_LoadSceneInfos = null;
+        private GameFrameworkLinkedList<UnloadSceneInfo> m_UnloadSceneInfos = null;
 
         /// <summary>
         /// 获取资源只读区路径。
@@ -201,6 +205,17 @@ namespace UnityGameFramework.Runtime
         }
 
         /// <summary>
+        /// 获取正在更新的资源组。
+        /// </summary>
+        public IResourceGroup UpdatingResourceGroup
+        {
+            get
+            {
+                throw new NotSupportedException("UpdatingResourceGroup");
+            }
+        }
+
+        /// <summary>
         /// 获取等待更新资源个数。
         /// </summary>
         public int UpdateWaitingCount
@@ -212,13 +227,13 @@ namespace UnityGameFramework.Runtime
         }
 
         /// <summary>
-        /// 获取更新失败资源数量。
+        /// 获取候选更新资源数量。
         /// </summary>
-        public int UpdateFailureCount
+        public int UpdateCandidateCount
         {
             get
             {
-                throw new NotSupportedException("UpdateFailureCount");
+                throw new NotSupportedException("UpdateCandidateCount");
             }
         }
 
@@ -397,6 +412,17 @@ namespace UnityGameFramework.Runtime
             }
         }
 
+        /// <summary>
+        /// 获取等待编辑器加载的资源数量。
+        /// </summary>
+        public int LoadWaitingAssetCount
+        {
+            get
+            {
+                return m_LoadAssetInfos.Count;
+            }
+        }
+
 #pragma warning disable 0067, 0414
 
         /// <summary>
@@ -425,9 +451,10 @@ namespace UnityGameFramework.Runtime
         {
             m_ReadOnlyPath = null;
             m_ReadWritePath = null;
-            m_LoadAssetInfos = new LinkedList<LoadAssetInfo>();
-            m_LoadSceneInfos = new LinkedList<LoadSceneInfo>();
-            m_UnloadSceneInfos = new LinkedList<UnloadSceneInfo>();
+            m_CachedAssets = new Dictionary<string, UnityEngine.Object>();
+            m_LoadAssetInfos = new GameFrameworkLinkedList<LoadAssetInfo>();
+            m_LoadSceneInfos = new GameFrameworkLinkedList<LoadSceneInfo>();
+            m_UnloadSceneInfos = new GameFrameworkLinkedList<UnloadSceneInfo>();
 
             BaseComponent baseComponent = GetComponent<BaseComponent>();
             if (baseComponent == null)
@@ -459,17 +486,25 @@ namespace UnityGameFramework.Runtime
                     float elapseSeconds = (float)(DateTime.Now - loadAssetInfo.StartTime).TotalSeconds;
                     if (elapseSeconds >= loadAssetInfo.DelaySeconds)
                     {
-                        UnityEngine.Object asset = null;
+                        UnityEngine.Object asset = GetCachedAsset(loadAssetInfo.AssetName);
+                        if (asset == null)
+                        {
 #if UNITY_EDITOR
-                        if (loadAssetInfo.AssetType != null)
-                        {
-                            asset = UnityEditor.AssetDatabase.LoadAssetAtPath(loadAssetInfo.AssetName, loadAssetInfo.AssetType);
-                        }
-                        else
-                        {
-                            asset = UnityEditor.AssetDatabase.LoadMainAssetAtPath(loadAssetInfo.AssetName);
-                        }
+                            if (loadAssetInfo.AssetType != null)
+                            {
+                                asset = UnityEditor.AssetDatabase.LoadAssetAtPath(loadAssetInfo.AssetName, loadAssetInfo.AssetType);
+                            }
+                            else
+                            {
+                                asset = UnityEditor.AssetDatabase.LoadMainAssetAtPath(loadAssetInfo.AssetName);
+                            }
+
+                            if (m_EnableCachedAssets && asset != null)
+                            {
+                                m_CachedAssets.Add(loadAssetInfo.AssetName, asset);
+                            }
 #endif
+                        }
 
                         if (asset != null)
                         {
@@ -674,7 +709,7 @@ namespace UnityGameFramework.Runtime
         /// <summary>
         /// 使用单机模式并初始化资源。
         /// </summary>
-        /// <param name="initResourcesCompleteCallback">使用单机模式并初始化资源完成的回调函数。</param>
+        /// <param name="initResourcesCompleteCallback">使用单机模式并初始化资源完成时的回调函数。</param>
         public void InitResources(InitResourcesCompleteCallback initResourcesCompleteCallback)
         {
             throw new NotSupportedException("InitResources");
@@ -706,17 +741,27 @@ namespace UnityGameFramework.Runtime
         /// <summary>
         /// 使用可更新模式并检查资源。
         /// </summary>
-        /// <param name="checkResourcesCompleteCallback">使用可更新模式并检查资源完成的回调函数。</param>
+        /// <param name="checkResourcesCompleteCallback">使用可更新模式并检查资源完成时的回调函数。</param>
         public void CheckResources(CheckResourcesCompleteCallback checkResourcesCompleteCallback)
         {
             throw new NotSupportedException("CheckResources");
         }
 
         /// <summary>
-        /// 使用可更新模式并更新资源。
+        /// 使用可更新模式并更新全部资源。
         /// </summary>
-        /// <param name="updateResourcesCompleteCallback">使用可更新模式并更新资源全部完成的回调函数。</param>
+        /// <param name="updateResourcesCompleteCallback">使用可更新模式并更新默认资源组完成时的回调函数。</param>
         public void UpdateResources(UpdateResourcesCompleteCallback updateResourcesCompleteCallback)
+        {
+            throw new NotSupportedException("UpdateResources");
+        }
+
+        /// <summary>
+        /// 使用可更新模式并更新指定资源组的资源。
+        /// </summary>
+        /// <param name="resourceGroupName">要更新的资源组名称。</param>
+        /// <param name="updateResourcesCompleteCallback">使用可更新模式并更新指定资源组完成时的回调函数。</param>
+        public void UpdateResources(string resourceGroupName, UpdateResourcesCompleteCallback updateResourcesCompleteCallback)
         {
             throw new NotSupportedException("UpdateResources");
         }
@@ -842,7 +887,7 @@ namespace UnityGameFramework.Runtime
                 return;
             }
 
-            if (!ExistsFile(assetName))
+            if (!HasFile(assetName))
             {
                 Log.Error("Asset '{0}' is not exist.", assetName);
                 return;
@@ -919,7 +964,7 @@ namespace UnityGameFramework.Runtime
                 return;
             }
 
-            if (!ExistsFile(sceneAssetName))
+            if (!HasFile(sceneAssetName))
             {
                 Log.Error("Scene '{0}' is not exist.", sceneAssetName);
                 return;
@@ -974,7 +1019,7 @@ namespace UnityGameFramework.Runtime
                 return;
             }
 
-            if (!ExistsFile(sceneAssetName))
+            if (!HasFile(sceneAssetName))
             {
                 Log.Error("Scene '{0}' is not exist.", sceneAssetName);
                 return;
@@ -1007,64 +1052,44 @@ namespace UnityGameFramework.Runtime
         }
 
         /// <summary>
-        /// 获取资源组是否准备完毕。
+        /// 检查资源组是否存在。
         /// </summary>
-        /// <param name="resourceGroupName">要检查的资源组名称。</param>
-        public bool GetResourceGroupReady(string resourceGroupName)
+        /// <param name="resourceGroupName">要检查资源组的名称。</param>
+        /// <returns>资源组是否存在。</returns>
+        public bool HasResourceGroup(string resourceGroupName)
         {
-            throw new NotSupportedException("GetResourceGroupReady");
+            throw new NotSupportedException("HasResourceGroup");
         }
 
         /// <summary>
-        /// 获取资源组资源个数。
+        /// 获取默认资源组。
         /// </summary>
-        /// <param name="resourceGroupName">要检查的资源组名称。</param>
-        public int GetResourceGroupResourceCount(string resourceGroupName)
+        /// <returns>默认资源组。</returns>
+        public IResourceGroup GetResourceGroup()
         {
-            throw new NotSupportedException("GetResourceGroupResourceCount");
+            throw new NotSupportedException("GetResourceGroup");
         }
 
         /// <summary>
-        /// 获取资源组已准备完成资源个数。
+        /// 获取资源组。
         /// </summary>
-        /// <param name="resourceGroupName">要检查的资源组名称。</param>
-        public int GetResourceGroupReadyResourceCount(string resourceGroupName)
+        /// <param name="resourceGroupName">要获取的资源组名称。</param>
+        /// <returns>要获取的资源组。</returns>
+        public IResourceGroup GetResourceGroup(string resourceGroupName)
         {
-            throw new NotSupportedException("GetResourceGroupReadyResourceCount");
+            throw new NotSupportedException("GetResourceGroup");
         }
 
-        /// <summary>
-        /// 获取资源组总大小。
-        /// </summary>
-        /// <param name="resourceGroupName">要检查的资源组名称。</param>
-        public int GetResourceGroupTotalLength(string resourceGroupName)
-        {
-            throw new NotSupportedException("GetResourceGroupTotalLength");
-        }
-
-        /// <summary>
-        /// 获取资源组已准备完成总大小。
-        /// </summary>
-        /// <param name="resourceGroupName">要检查的资源组名称。</param>
-        public int GetResourceGroupTotalReadyLength(string resourceGroupName)
-        {
-            throw new NotSupportedException("GetResourceGroupTotalReadyLength");
-        }
-
-        /// <summary>
-        /// 获取资源组准备进度。
-        /// </summary>
-        /// <param name="resourceGroupName">要检查的资源组名称。</param>
-        public float GetResourceGroupProgress(string resourceGroupName)
-        {
-            throw new NotSupportedException("GetResourceGroupProgress");
-        }
-
-        private bool ExistsFile(string assetName)
+        private bool HasFile(string assetName)
         {
             if (string.IsNullOrEmpty(assetName))
             {
                 return false;
+            }
+
+            if (HasCachedAsset(assetName))
+            {
+                return true;
             }
 
             string assetFullName = Application.dataPath.Substring(0, Application.dataPath.Length - AssetsStringLength) + assetName;
@@ -1109,6 +1134,42 @@ namespace UnityGameFramework.Runtime
             }
 
             return true;
+        }
+
+        private bool HasCachedAsset(string assetName)
+        {
+            if (!m_EnableCachedAssets)
+            {
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(assetName))
+            {
+                return false;
+            }
+
+            return m_CachedAssets.ContainsKey(assetName);
+        }
+
+        private UnityEngine.Object GetCachedAsset(string assetName)
+        {
+            if (!m_EnableCachedAssets)
+            {
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(assetName))
+            {
+                return null;
+            }
+
+            UnityEngine.Object asset = null;
+            if (m_CachedAssets.TryGetValue(assetName, out asset))
+            {
+                return asset;
+            }
+
+            return null;
         }
 
         private sealed class LoadAssetInfo
