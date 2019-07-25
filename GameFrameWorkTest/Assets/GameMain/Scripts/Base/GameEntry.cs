@@ -16,8 +16,8 @@ namespace StarForce
     {
         private void Start()
         {
-            InitBuiltinComponents();
-            InitCustomComponents();
+            InitBuiltinComponents();//初始化内置组件
+            InitCustomComponents();//初始化自定义组件
         }
     }
 }
