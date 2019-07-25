@@ -53,6 +53,21 @@ namespace GameFramework.Download
         }
 
         /// <summary>
+        /// 获取或设置下载是否被暂停。
+        /// </summary>
+        public bool Paused
+        {
+            get
+            {
+                return m_TaskPool.Paused;
+            }
+            set
+            {
+                m_TaskPool.Paused = value;
+            }
+        }
+
+        /// <summary>
         /// 获取下载代理总数量。
         /// </summary>
         public int TotalAgentCount
@@ -292,7 +307,8 @@ namespace GameFramework.Download
                 throw new GameFrameworkException("You must add download agent first.");
             }
 
-            DownloadTask downloadTask = new DownloadTask(downloadPath, downloadUri, priority, m_FlushSize, m_Timeout, userData);
+            DownloadTask downloadTask = ReferencePool.Acquire<DownloadTask>();
+            downloadTask.Initialize(downloadPath, downloadUri, priority, m_FlushSize, m_Timeout, userData);
             m_TaskPool.AddTask(downloadTask);
 
             return downloadTask.SerialId;
@@ -305,7 +321,7 @@ namespace GameFramework.Download
         /// <returns>是否移除下载任务成功。</returns>
         public bool RemoveDownload(int serialId)
         {
-            return m_TaskPool.RemoveTask(serialId) != null;
+            return m_TaskPool.RemoveTask(serialId);
         }
 
         /// <summary>
@@ -335,7 +351,6 @@ namespace GameFramework.Download
 
         private void OnDownloadAgentSuccess(DownloadAgent sender, int lastDownloadedLength)
         {
-            m_DownloadCounter.RecordDownloadedLength(lastDownloadedLength);
             if (m_DownloadSuccessEventHandler != null)
             {
                 m_DownloadSuccessEventHandler(this, new DownloadSuccessEventArgs(sender.Task.SerialId, sender.Task.DownloadPath, sender.Task.DownloadUri, sender.CurrentLength, sender.Task.UserData));

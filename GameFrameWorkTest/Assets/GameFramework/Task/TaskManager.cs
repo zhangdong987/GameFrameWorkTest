@@ -14,7 +14,7 @@ namespace GameFramework.Task
     /// </summary>
     internal sealed class TaskManager : GameFrameworkModule, ITaskManager
     {
-        private readonly LinkedList<TaskBase> m_Tasks;
+        private readonly GameFrameworkLinkedList<TaskBase> m_Tasks;
         private int m_Serial;
 
         /// <summary>
@@ -22,7 +22,7 @@ namespace GameFramework.Task
         /// </summary>
         public TaskManager()
         {
-            m_Tasks = new LinkedList<TaskBase>();
+            m_Tasks = new GameFrameworkLinkedList<TaskBase>();
             m_Serial = 0;
         }
 
@@ -107,8 +107,7 @@ namespace GameFramework.Task
         public T GenerateTask<T>(int priority) where T : TaskBase, new()
         {
             T task = ReferencePool.Acquire<T>();
-            task.SerialId = m_Serial++;
-            task.Priority = priority;
+            task.Initialize(m_Serial++, priority);
             task.OnGenerate();
 
             LinkedListNode<TaskBase> current = m_Tasks.First;
