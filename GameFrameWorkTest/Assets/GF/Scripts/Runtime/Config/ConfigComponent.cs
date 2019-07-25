@@ -26,22 +26,22 @@ namespace UnityGameFramework.Runtime
         private EventComponent m_EventComponent = null;
 
         [SerializeField]
-        private bool m_EnableLoadConfigSuccessEvent = true;
+        private bool m_EnableLoadConfigSuccessEvent = true;//是否开启加载配置表成功的事件 
 
         [SerializeField]
-        private bool m_EnableLoadConfigFailureEvent = true;
+        private bool m_EnableLoadConfigFailureEvent = true;//是否开启加载配置表失败的事件
 
         [SerializeField]
         private bool m_EnableLoadConfigUpdateEvent = false;
 
         [SerializeField]
-        private bool m_EnableLoadConfigDependencyAssetEvent = false;
+        private bool m_EnableLoadConfigDependencyAssetEvent = false;//是否开启加载配置表依赖资源的事件
 
         [SerializeField]
         private string m_ConfigHelperTypeName = "UnityGameFramework.Runtime.DefaultConfigHelper";
 
         [SerializeField]
-        private ConfigHelperBase m_CustomConfigHelper = null;
+        private ConfigHelperBase m_CustomConfigHelper = null;//自定义配置表辅助器
 
         /// <summary>
         /// 获取配置数量。

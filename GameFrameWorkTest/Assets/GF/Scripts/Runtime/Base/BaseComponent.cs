@@ -285,7 +285,7 @@ namespace UnityGameFramework.Runtime
             Destroy(gameObject);
         }
 
-        private void InitVersionHelper()
+        private void InitVersionHelper()//初始化版本辅助器
         {
             if (string.IsNullOrEmpty(m_VersionHelperTypeName))
             {
@@ -304,10 +304,10 @@ namespace UnityGameFramework.Runtime
                 throw new GameFrameworkException(Utility.Text.Format("Can not create version helper instance '{0}'.", m_VersionHelperTypeName));
             }
 
-            GameFramework.Version.SetVersionHelper(versionHelper);
+            GameFramework.Version.SetVersionHelper(versionHelper);//设置版本号辅助器
         }
 
-        private void InitLogHelper()
+        private void InitLogHelper()//初始化日志辅助器
         {
             if (string.IsNullOrEmpty(m_LogHelperTypeName))
             {
@@ -328,7 +328,7 @@ namespace UnityGameFramework.Runtime
 
             GameFrameworkLog.SetLogHelper(logHelper);
         }
-
+        //初始化压缩解压辅助器
         private void InitZipHelper()
         {
             if (string.IsNullOrEmpty(m_ZipHelperTypeName))
@@ -352,7 +352,7 @@ namespace UnityGameFramework.Runtime
 
             Utility.Zip.SetZipHelper(zipHelper);
         }
-
+        //初始化json辅助器
         private void InitJsonHelper()
         {
             if (string.IsNullOrEmpty(m_JsonHelperTypeName))
@@ -376,7 +376,7 @@ namespace UnityGameFramework.Runtime
 
             Utility.Json.SetJsonHelper(jsonHelper);
         }
-
+        //初始化性能分析辅助器
         private void InitProfilerHelper()
         {
             if (string.IsNullOrEmpty(m_ProfilerHelperTypeName))
@@ -400,7 +400,7 @@ namespace UnityGameFramework.Runtime
 
             Utility.Profiler.SetProfilerHelper(profilerHelper);
         }
-
+        //当内存不足的时候触发
         private void OnLowMemory()
         {
             Log.Info("Low memory reported...");
